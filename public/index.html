@@ -7,119 +7,295 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
   body {
-    background: #0b0d10; color: #f0f4f8; font-family: system-ui, -apple-system, sans-serif;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    min-height: 100vh; gap: 1rem; padding: 1rem;
+    background: radial-gradient(circle at center, #26272b 0%, #111215 100%);
+    color: #e4e4e7;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 1.4rem;
+    padding: 1rem;
   }
-  .card {
-    background: #151921; border: 1px solid #262c3a; padding: 1.25rem 1.5rem;
-    border-radius: 12px; display: flex; flex-direction: column; align-items: center;
-    gap: 0.9rem; width: 100%; max-width: 390px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+
+  /* Mechanical Odometer Housing */
+  .odometer-frame {
+    background: linear-gradient(180deg, #1b1c20 0%, #0d0e11 100%);
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid #2e3036;
+    box-shadow:
+      0 14px 35px rgba(0,0,0,0.75),
+      inset 0 2px 5px rgba(0,0,0,0.9),
+      inset 0 -1px 2px rgba(255,255,255,0.06);
+    cursor: pointer;
   }
-  .counter-row {
-    display: flex; align-items: center; justify-content: center; gap: 0.85rem; width: 100%;
+
+  .odometer-window {
+    display: flex;
+    gap: 4px;
+    background: #050507;
+    padding: 4px;
+    border-radius: 6px;
+    border: 1px solid #000;
+    box-shadow: inset 0 4px 10px rgba(0,0,0,0.95);
   }
-  #count {
-    font-size: 2.25rem; font-weight: 800; font-variant-numeric: tabular-nums;
-    color: #38bdf8; min-width: 5.5rem; text-align: center;
-    background: #0f1319; border: 1px solid #1e293b; border-radius: 8px;
-    padding: 0.25rem 0.75rem; transition: transform 0.06s ease-out; cursor: pointer;
+
+  /* Each Digit Drum */
+  .drum {
+    position: relative;
+    width: 48px;
+    height: 72px;
+    overflow: hidden;
+    border-radius: 3px;
+    background: linear-gradient(
+      180deg,
+      #060608 0%,
+      #1c1d22 14%,
+      #34363e 24%,
+      #141518 48%,
+      #0c0d10 52%,
+      #2e3038 76%,
+      #18191d 86%,
+      #050507 100%
+    );
+    box-shadow:
+      inset 1px 0 0 rgba(255,255,255,0.08),
+      inset -1px 0 0 rgba(0,0,0,0.85),
+      0 0 2px rgba(0,0,0,0.9);
   }
-  #count.bump { transform: scale(1.06); }
-  .step-btn {
-    background: #1e293b; color: #f8fafc; border: 1px solid #334155;
-    width: 2.5rem; height: 2.5rem; border-radius: 8px; font-size: 1.15rem;
-    font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;
+
+  .drum::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg,
+        rgba(0,0,0,0.85) 0%,
+        rgba(0,0,0,0.2) 15%,
+        rgba(255,255,255,0.07) 24%,
+        transparent 38%,
+        transparent 62%,
+        rgba(255,255,255,0.05) 76%,
+        rgba(0,0,0,0.25) 85%,
+        rgba(0,0,0,0.88) 100%
+      );
+    border-top: 1px solid rgba(255,255,255,0.08);
+    border-bottom: 1px solid rgba(0,0,0,0.9);
   }
-  .step-btn:hover { background: #334155; }
-  .step-btn.plus { background: #0284c7; border-color: #38bdf8; }
-  .step-btn.plus:hover { background: #0369a1; }
+
+  .drum::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0;
+    top: 11px; bottom: 11px;
+    z-index: 2;
+    pointer-events: none;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    border-bottom: 1px solid rgba(255,255,255,0.10);
+  }
+
+  .drum-ribbon {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    will-change: transform;
+    transition: transform 0.14s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+
+  .drum-digit {
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bahnschrift', 'Oswald', 'Arial Narrow', system-ui, sans-serif;
+    font-size: 44px;
+    font-weight: 700;
+    color: #f4f4f6;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.85);
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  /* Sleek Settings Panel */
+  .panel {
+    background: rgba(20, 21, 26, 0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid #2a2c34;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    width: 100%;
+    max-width: 350px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.45);
+  }
+
   .row {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 0.5rem; font-size: 0.85rem; color: #94a3b8; width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+    color: #a1a1aa;
   }
+
+  .key-group {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
   kbd {
-    background: #1e2530; border: 1px solid #334155; border-bottom-width: 2px;
-    padding: 0.25rem 0.55rem; border-radius: 5px; color: #f8fafc; font-family: monospace;
-    font-size: 0.85rem; font-weight: 700; min-width: 3.2rem; text-align: center;
+    background: #111216;
+    border: 1px solid #32353e;
+    border-bottom-width: 2px;
+    padding: 0.22rem 0.55rem;
+    border-radius: 5px;
+    color: #f4f4f6;
+    font-family: monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    min-width: 3rem;
+    text-align: center;
   }
+
   button {
-    background: #2563eb; color: #fff; border: none; padding: 0.38rem 0.7rem;
-    border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.8rem;
+    background: #272932;
+    color: #e4e4e7;
+    border: 1px solid #383b47;
+    padding: 0.35rem 0.65rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.78rem;
+    transition: background 0.15s, border-color 0.15s;
   }
-  button:hover { background: #1d4ed8; }
-  button.secondary { background: #1e293b; border: 1px solid #334155; color: #cbd5e1; }
-  button.secondary:hover { background: #334155; }
-  button.listening { background: #dc2626; animation: pulse 1s infinite; }
-  input[type="number"], input[type="text"] {
-    background: #0f1319; border: 1px solid #334155; color: #f8fafc;
-    border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.85rem; width: 6.5rem;
+  button:hover { background: #323540; border-color: #4b4f5e; }
+  button.primary { background: #e4e4e7; color: #09090b; border-color: #fff; }
+  button.primary:hover { background: #fff; }
+  button.active-bg { background: #065f46; border-color: #10b981; color: #ecfdf5; }
+  button.listening { background: #dc2626; border-color: #ef4444; color: #fff; animation: pulse 1s infinite; }
+
+  input[type="number"] {
+    background: #111216;
+    border: 1px solid #32353e;
+    color: #f4f4f6;
+    border-radius: 6px;
+    padding: 0.32rem 0.5rem;
+    font-size: 0.8rem;
+    width: 5.5rem;
     user-select: text;
   }
-  .divider { width: 100%; height: 1px; background: #262c3a; }
-  .actions { display: flex; gap: 0.5rem; width: 100%; flex-wrap: wrap; }
-  .actions button { flex: 1; min-width: 140px; padding: 0.5rem; }
-  .status { font-size: 0.75rem; color: #64748b; display: flex; align-items: center; gap: 5px; }
-  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
+
+  .divider { width: 100%; height: 1px; background: #24262d; }
+  .actions { display: flex; gap: 0.45rem; width: 100%; }
+  .actions button { flex: 1; padding: 0.48rem; }
+
+  .status {
+    font-size: 0.72rem;
+    color: #71717a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .status-item { display: flex; align-items: center; gap: 5px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; }
   .dot.off { background: #ef4444; }
+  .dot.warn { background: #f59e0b; }
+
+  /* Floating Mini Window: ONLY the odometer number */
+  body.mini {
+    background: #0d0e11;
+    padding: 0;
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
   body.mini .hide-mini { display: none !important; }
-  body.mini { padding: 0.35rem; gap: 0.3rem; min-height: 100vh; }
-  body.mini .card { padding: 0.5rem 0.75rem; gap: 0.4rem; border: none; background: transparent; box-shadow: none; }
-  body.mini #count { font-size: 1.65rem; min-width: 4rem; padding: 0.15rem 0.5rem; }
-  @keyframes pulse { 50% { opacity: 0.7; } }
+  body.mini .odometer-frame {
+    box-shadow: none;
+    border: none;
+    padding: 4px;
+    background: transparent;
+  }
+
+  @keyframes pulse { 50% { opacity: 0.65; } }
 </style>
 </head>
 <body>
-  <div class="card" id="mainCard">
-    <div class="counter-row">
-      <button class="step-btn" id="decBtn" title="Diminuir -1">-1</button>
-      <div id="count" title="Clique para +1">0</div>
-      <button class="step-btn plus" id="incBtn" title="Aumentar +1">+1</button>
+
+  <div class="odometer-frame" id="odoFrame" title="Clique esquerdo: +1 | Clique direito: -1">
+    <div class="odometer-window" id="odoWindow"></div>
+  </div>
+
+  <div class="panel hide-mini">
+    <div class="row">
+      <span>Aumentar (+1)</span>
+      <div class="key-group">
+        <kbd id="incKeyDisplay">Space</kbd>
+        <button id="bindIncBtn">Trocar</button>
+      </div>
     </div>
 
-    <div class="row hide-mini">
-      <span>Tecla +1:</span>
-      <kbd id="incKeyDisplay">Space</kbd>
-      <button id="bindIncBtn" class="secondary">Trocar</button>
+    <div class="row">
+      <span>Retornar (-1)</span>
+      <div class="key-group">
+        <kbd id="decKeyDisplay">-</kbd>
+        <button id="bindDecBtn">Trocar</button>
+      </div>
     </div>
 
-    <div class="row hide-mini">
-      <span>Tecla -1 (Voltar):</span>
-      <kbd id="decKeyDisplay">Minus</kbd>
-      <button id="bindDecBtn" class="secondary">Trocar</button>
+    <div class="divider"></div>
+
+    <div class="row">
+      <span>Definir nº</span>
+      <div class="key-group">
+        <input type="number" id="setInput" placeholder="0000">
+        <button id="setBtn" class="primary">Salvar</button>
+        <button id="resetBtn">Zerar</button>
+      </div>
     </div>
 
-    <div class="divider hide-mini"></div>
+    <div class="divider"></div>
 
-    <div class="row hide-mini">
-      <span>Salvar nº:</span>
-      <input type="number" id="setInput" placeholder="Valor...">
-      <button id="setBtn">Salvar</button>
-      <button id="resetBtn" class="secondary" title="Voltar para 0">Zerar</button>
-    </div>
-
-    <div class="divider hide-mini"></div>
-
-    <div class="actions hide-mini">
-      <button id="pipBtn" title="Destacar mini janela sempre no topo fora do navegador">Janela Flutuante (PiP)</button>
-      <button id="overlayBtn" class="secondary" title="Baixar mini overlay para Windows que funciona com tecla global dentro do jogo">Overlay p/ Jogo (.bat)</button>
+    <div class="actions">
+      <button id="pipBtn" class="primary" title="Destaca janela flutuante apenas com o número">Janela Flutuante</button>
+      <button id="bgBtn" title="Ativa leitura da tecla em 2º plano enquanto você joga">Ativar 2º Plano (.bat)</button>
     </div>
 
     <div class="status">
-      <span id="dot" class="dot"></span>
-      <span id="statusText">Sincronizando...</span>
+      <div class="status-item">
+        <span id="dot" class="dot"></span>
+        <span id="statusText">Sincronizado</span>
+      </div>
+      <div class="status-item">
+        <span id="bgDot" class="dot warn"></span>
+        <span id="bgText">2º Plano: Conectando...</span>
+      </div>
     </div>
   </div>
 
 <script>
   const params = new URLSearchParams(location.search);
-  if (params.get('mini') === '1') document.body.classList.add('mini');
+  const isMini = params.get('mini') === '1';
+  if (isMini) document.body.classList.add('mini');
   const room = params.get('room') || 'global';
   const NTFY_TOPIC = `diogo_rt_counter_global_v2_${room}`;
+  const MIN_DIGITS = 4;
+  const DIGIT_HEIGHT = 72;
+  const EASE_FAST = 'transform 0.14s cubic-bezier(0.2, 0.9, 0.3, 1)';
 
-  const countEl = document.getElementById('count');
-  const incBtn = document.getElementById('incBtn');
-  const decBtn = document.getElementById('decBtn');
+  const odoWindow = document.getElementById('odoWindow');
+  const odoFrame = document.getElementById('odoFrame');
   const incKeyDisplay = document.getElementById('incKeyDisplay');
   const decKeyDisplay = document.getElementById('decKeyDisplay');
   const bindIncBtn = document.getElementById('bindIncBtn');
@@ -128,9 +304,11 @@
   const setBtn = document.getElementById('setBtn');
   const resetBtn = document.getElementById('resetBtn');
   const pipBtn = document.getElementById('pipBtn');
-  const overlayBtn = document.getElementById('overlayBtn');
+  const bgBtn = document.getElementById('bgBtn');
   const dot = document.getElementById('dot');
   const statusText = document.getElementById('statusText');
+  const bgDot = document.getElementById('bgDot');
+  const bgText = document.getElementById('bgText');
 
   let currentCount = parseInt(localStorage.getItem(`counter_val_${room}`), 10) || 0;
   let incCode = localStorage.getItem('counter_inc_code') || 'Space';
@@ -141,103 +319,243 @@
   let decLabel = localStorage.getItem('counter_dec_label') || '-';
   let decVk = parseInt(localStorage.getItem('counter_dec_vk'), 10) || 189;
 
-  let listeningMode = null; // 'inc' | 'dec' | null
+  let listeningMode = null;
   let pipWindow = null;
+  let lastLocalEditTs = 0;
+  let lastTriggerTime = 0;
+  let pushTimer = null;
+
+  // Instant 0ms cross-tab / multi-window bus (prevents browser connection freeze)
+  const bus = ('BroadcastChannel' in window) ? new BroadcastChannel(`counter_bus_${room}`) : null;
+  if (bus) {
+    bus.onmessage = (e) => {
+      if (e.data && typeof e.data.count === 'number') {
+        lastLocalEditTs = Math.max(lastLocalEditTs, e.data.ts || 0);
+        render(e.data.count, false);
+      }
+    };
+  }
+  window.addEventListener('storage', (e) => {
+    if (e.key === `counter_val_${room}` && e.newValue !== null) {
+      render(parseInt(e.newValue, 10) || 0, false);
+    }
+  });
 
   incKeyDisplay.textContent = incLabel;
   decKeyDisplay.textContent = decLabel;
-  countEl.textContent = currentCount;
 
-  function render(val) {
-    const num = Number(val);
-    if (!Number.isFinite(num)) return;
-    currentCount = num;
-    localStorage.setItem(`counter_val_${room}`, String(num));
-    countEl.textContent = num;
-    countEl.classList.add('bump');
-    setTimeout(() => countEl.classList.remove('bump'), 60);
-    if (pipWindow && !pipWindow.closed) {
-      const pipCount = pipWindow.document.getElementById('pipCount');
-      if (pipCount) pipCount.textContent = num;
+  function buildOdometer(container, digitCount) {
+    while (container.children.length < digitCount) {
+      const drum = container.ownerDocument.createElement('div');
+      drum.className = 'drum';
+      drum.dataset.digit = '0';
+      const ribbon = container.ownerDocument.createElement('div');
+      ribbon.className = 'drum-ribbon';
+      const seq = [9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+      for (const d of seq) {
+        const cell = container.ownerDocument.createElement('div');
+        cell.className = 'drum-digit';
+        cell.textContent = d;
+        ribbon.appendChild(cell);
+      }
+      ribbon.style.transition = 'none';
+      ribbon.style.transform = `translateY(-100%)`;
+      drum.appendChild(ribbon);
+      container.appendChild(drum);
+    }
+    while (container.children.length > digitCount) {
+      container.removeChild(container.lastChild);
     }
   }
 
-  async function pushUpdate(payload) {
-    try {
-      const res = await fetch(`/api/count?room=${encodeURIComponent(room)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        render(data.count);
-        return;
+  function updateOdometerDOM(container, val, heightPx) {
+    const clean = Math.max(0, Math.trunc(Number(val) || 0));
+    const str = String(clean).padStart(MIN_DIGITS, '0');
+    buildOdometer(container, str.length);
+    for (let i = 0; i < str.length; i++) {
+      const drum = container.children[i];
+      const ribbon = drum.firstElementChild;
+      const prev = parseInt(drum.dataset.digit || '0', 10);
+      const next = parseInt(str[i], 10) || 0;
+      if (prev === next && drum.dataset.init === '1') continue;
+      drum.dataset.digit = String(next);
+      drum.dataset.init = '1';
+
+      if (drum._snapTimer) {
+        clearTimeout(drum._snapTimer);
+        drum._snapTimer = null;
       }
-    } catch {}
-    // Direct ntfy fallback so static or serverless cold starts stay synced
-    try {
-      await fetch(`https://ntfy.sh/${encodeURIComponent(NTFY_TOPIC)}`, {
-        method: 'POST',
-        body: JSON.stringify({ count: currentCount, ts: Date.now() })
-      });
-    } catch {}
+
+      if (prev === 9 && next === 0) {
+        ribbon.style.transition = EASE_FAST;
+        ribbon.style.transform = `translateY(-${11 * heightPx}px)`;
+        drum._snapTimer = setTimeout(() => {
+          ribbon.style.transition = 'none';
+          ribbon.style.transform = `translateY(-${1 * heightPx}px)`;
+        }, 150);
+      } else if (prev === 0 && next === 9) {
+        ribbon.style.transition = EASE_FAST;
+        ribbon.style.transform = `translateY(0px)`;
+        drum._snapTimer = setTimeout(() => {
+          ribbon.style.transition = 'none';
+          ribbon.style.transform = `translateY(-${10 * heightPx}px)`;
+        }, 150);
+      } else {
+        ribbon.style.transition = EASE_FAST;
+        ribbon.style.transform = `translateY(-${(next + 1) * heightPx}px)`;
+      }
+    }
+  }
+
+  function render(val, broadcastLocal = true) {
+    const num = Math.max(0, Math.trunc(Number(val) || 0));
+    currentCount = num;
+    localStorage.setItem(`counter_val_${room}`, String(num));
+    updateOdometerDOM(odoWindow, num, DIGIT_HEIGHT);
+    if (pipWindow && !pipWindow.closed) {
+      const pipOdo = pipWindow.document.getElementById('pipOdoWindow');
+      if (pipOdo) updateOdometerDOM(pipOdo, num, 56);
+    }
+    if (broadcastLocal && bus) {
+      bus.postMessage({ count: num, ts: lastLocalEditTs });
+    }
+  }
+
+  render(currentCount, false);
+
+  // Coalesced network flush: rapid clicks batch into 1 request and never roll back local state
+  function schedulePush() {
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = setTimeout(async () => {
+      const targetVal = currentCount;
+      const sendTs = Date.now();
+      try {
+        await fetch(`/api/count?room=${encodeURIComponent(room)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: targetVal, ts: sendTs })
+        });
+        return;
+      } catch {}
+      try {
+        await fetch(`https://ntfy.sh/${encodeURIComponent(NTFY_TOPIC)}`, {
+          method: 'POST',
+          body: JSON.stringify({ count: targetVal, ts: sendTs })
+        });
+      } catch {}
+    }, 80);
   }
 
   function changeBy(delta) {
-    render(currentCount + delta);
-    pushUpdate({ delta });
+    const now = performance.now();
+    if (now - lastTriggerTime < 45) return; // Deduplicate simultaneous local + background hook
+    lastTriggerTime = now;
+    lastLocalEditTs = Date.now();
+    const next = Math.max(0, currentCount + delta);
+    render(next, true);
+    schedulePush();
   }
 
   function setExact(value) {
-    const num = Math.trunc(Number(value));
-    if (!Number.isFinite(num)) return;
-    render(num);
-    pushUpdate({ value: num });
+    lastLocalEditTs = Date.now();
+    const num = Math.max(0, Math.trunc(Number(value) || 0));
+    render(num, true);
+    schedulePush();
   }
 
-  async function initialSync() {
+  // Leader election so opening 10+ windows doesn't exhaust browser HTTP/SSE sockets
+  const tabId = Math.random().toString(36).slice(2);
+  let remoteEs = null;
+
+  function isLeaderTab() {
+    if (isMini) return false;
+    const now = Date.now();
+    const raw = localStorage.getItem(`counter_leader_${room}`);
+    if (raw) {
+      try {
+        const leader = JSON.parse(raw);
+        if (leader.id !== tabId && now - leader.ts < 5000) return false;
+      } catch {}
+    }
+    localStorage.setItem(`counter_leader_${room}`, JSON.stringify({ id: tabId, ts: now }));
+    return true;
+  }
+
+  async function pollRemote() {
+    if (!isLeaderTab()) return;
     try {
       const res = await fetch(`/api/count?room=${encodeURIComponent(room)}`);
       if (res.ok) {
         const data = await res.json();
-        if (typeof data.count === 'number') {
-          if (data.count === 0 && currentCount !== 0) {
+        if (typeof data.count === 'number' && Date.now() - lastLocalEditTs > 1500) {
+          if (data.count === 0 && currentCount > 0) {
             setExact(currentCount);
-          } else {
-            render(data.count);
+          } else if (data.count !== currentCount) {
+            render(data.count, true);
           }
-          dot.classList.remove('off');
-          statusText.textContent = 'Sincronizado em todos os PCs';
         }
+        dot.classList.remove('off');
+        statusText.textContent = 'Sincronizado';
       }
     } catch {
       dot.classList.add('off');
-      statusText.textContent = 'Modo offline (salvo localmente)';
+      statusText.textContent = 'Offline (Local)';
     }
   }
 
-  function connectRealtime() {
-    const es = new EventSource(`https://ntfy.sh/${encodeURIComponent(NTFY_TOPIC)}/sse`);
-    es.onmessage = (e) => {
+  function ensureLeaderSSE() {
+    if (!isLeaderTab()) {
+      if (remoteEs) { remoteEs.close(); remoteEs = null; }
+      return;
+    }
+    if (remoteEs) return;
+    remoteEs = new EventSource(`https://ntfy.sh/${encodeURIComponent(NTFY_TOPIC)}/sse`);
+    remoteEs.onmessage = (e) => {
+      if (Date.now() - lastLocalEditTs < 1200) return;
       try {
         const data = JSON.parse(e.data);
-        if (typeof data.count === 'number') render(data.count);
-        else if (data.message) {
-          const inner = JSON.parse(data.message);
-          if (typeof inner.count === 'number') render(inner.count);
-        }
+        const val = typeof data.count === 'number' ? data.count : (data.message ? JSON.parse(data.message).count : null);
+        if (typeof val === 'number' && val !== currentCount) render(val, true);
       } catch {}
-    };
-    es.onopen = () => {
-      dot.classList.remove('off');
-      statusText.textContent = 'Sincronizado em tempo real';
     };
   }
 
-  incBtn.addEventListener('click', () => changeBy(1));
-  decBtn.addEventListener('click', () => changeBy(-1));
-  countEl.addEventListener('click', () => changeBy(1));
+  // Local Background Key Bridge (127.0.0.1:31337) for detecting keys while in another tab/window/game
+  let bgEs = null;
+  function syncBgKeys() {
+    fetch(`http://127.0.0.1:31337/config?inc=${incVk}&dec=${decVk}`).catch(() => {});
+  }
+
+  function connectBgBridge() {
+    if (isMini || bgEs) return;
+    try {
+      bgEs = new EventSource('http://127.0.0.1:31337/events');
+      bgEs.onopen = () => {
+        bgDot.className = 'dot';
+        bgText.textContent = '2º Plano: Ativo (Jogo)';
+        bgBtn.classList.add('active-bg');
+        bgBtn.textContent = '2º Plano Ativo ✓';
+        syncBgKeys();
+      };
+      bgEs.onmessage = (e) => {
+        try {
+          const d = JSON.parse(e.data);
+          if (typeof d.delta === 'number') changeBy(d.delta);
+        } catch {}
+      };
+      bgEs.onerror = () => {
+        bgDot.className = 'dot warn';
+        bgText.textContent = '2º Plano: Inativo';
+        bgBtn.classList.remove('active-bg');
+        bgBtn.textContent = 'Ativar 2º Plano (.bat)';
+        bgEs.close();
+        bgEs = null;
+      };
+    } catch {}
+  }
+
+  odoFrame.addEventListener('click', () => changeBy(1));
+  odoFrame.addEventListener('contextmenu', (e) => { e.preventDefault(); changeBy(-1); });
 
   setBtn.addEventListener('click', () => {
     if (setInput.value !== '') {
@@ -258,8 +576,8 @@
     listeningMode = listeningMode === mode ? null : mode;
     bindIncBtn.classList.toggle('listening', listeningMode === 'inc');
     bindDecBtn.classList.toggle('listening', listeningMode === 'dec');
-    bindIncBtn.textContent = listeningMode === 'inc' ? 'Pressione...' : 'Trocar';
-    bindDecBtn.textContent = listeningMode === 'dec' ? 'Pressione...' : 'Trocar';
+    bindIncBtn.textContent = listeningMode === 'inc' ? 'Tecla...' : 'Trocar';
+    bindDecBtn.textContent = listeningMode === 'dec' ? 'Tecla...' : 'Trocar';
   }
 
   bindIncBtn.addEventListener('click', () => toggleBind('inc'));
@@ -284,6 +602,7 @@
         localStorage.setItem('counter_dec_vk', String(decVk));
         decKeyDisplay.textContent = decLabel;
       }
+      syncBgKeys();
       toggleBind(null);
       return;
     }
@@ -294,93 +613,88 @@
 
   window.addEventListener('keydown', handleKeydown);
 
-  // Floating Window outside browser (Document Picture-in-Picture Always-on-Top + Popup fallback)
+  // Floating Window outside browser: ONLY the mechanical odometer number
   pipBtn.addEventListener('click', async () => {
     if ('documentPictureInPicture' in window) {
       try {
-        pipWindow = await window.documentPictureInPicture.requestWindow({ width: 230, height: 95 });
+        pipWindow = await window.documentPictureInPicture.requestWindow({ width: 205, height: 84 });
         pipWindow.document.head.innerHTML = `
           <style>
-            * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: system-ui, sans-serif; }
-            body { background: #0b0d10; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; gap: 10px; padding: 8px; }
-            button { background: #1e293b; color: #fff; border: 1px solid #334155; border-radius: 6px; width: 34px; height: 34px; font-weight: 700; cursor: pointer; font-size: 14px; }
-            button.plus { background: #0284c7; border-color: #38bdf8; }
-            #pipCount { font-size: 26px; font-weight: 800; color: #38bdf8; min-width: 64px; text-align: center; font-variant-numeric: tabular-nums; cursor: pointer; }
+            * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+            body {
+              background: #0d0e11; display: flex; align-items: center; justify-content: center;
+              height: 100vh; overflow: hidden; cursor: pointer;
+            }
+            .odometer-window {
+              display: flex; gap: 3px; background: #050507; padding: 4px;
+              border-radius: 6px; border: 1px solid #222;
+              box-shadow: inset 0 4px 10px rgba(0,0,0,0.95);
+            }
+            .drum {
+              position: relative; width: 38px; height: 56px; overflow: hidden; border-radius: 3px;
+              background: linear-gradient(180deg, #060608 0%, #1c1d22 14%, #34363e 24%, #141518 48%, #0c0d10 52%, #2e3038 76%, #18191d 86%, #050507 100%);
+              box-shadow: inset 1px 0 0 rgba(255,255,255,0.08), inset -1px 0 0 rgba(0,0,0,0.85);
+            }
+            .drum::before {
+              content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+              background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 15%, rgba(255,255,255,0.07) 24%, transparent 38%, transparent 62%, rgba(255,255,255,0.05) 76%, rgba(0,0,0,0.25) 85%, rgba(0,0,0,0.88) 100%);
+            }
+            .drum::after {
+              content: ""; position: absolute; left: 0; right: 0; top: 8px; bottom: 8px; z-index: 2; pointer-events: none;
+              border-top: 1px solid rgba(255,255,255,0.12); border-bottom: 1px solid rgba(255,255,255,0.10);
+            }
+            .drum-ribbon {
+              display: flex; flex-direction: column; width: 100%;
+              transition: transform 0.14s cubic-bezier(0.2, 0.9, 0.3, 1);
+            }
+            .drum-digit {
+              height: 56px; display: flex; align-items: center; justify-content: center;
+              font-family: 'Bahnschrift', 'Oswald', 'Arial Narrow', system-ui, sans-serif;
+              font-size: 34px; font-weight: 700; color: #f4f4f6; text-shadow: 0 2px 4px rgba(0,0,0,0.85);
+              flex-shrink: 0;
+            }
           </style>
         `;
-        pipWindow.document.body.innerHTML = `
-          <button id="pipDec">-1</button>
-          <div id="pipCount" title="Clique para +1">${currentCount}</div>
-          <button id="pipInc" class="plus">+1</button>
-        `;
-        pipWindow.document.getElementById('pipDec').onclick = () => changeBy(-1);
-        pipWindow.document.getElementById('pipInc').onclick = () => changeBy(1);
-        pipWindow.document.getElementById('pipCount').onclick = () => changeBy(1);
+        pipWindow.document.body.innerHTML = `<div class="odometer-window" id="pipOdoWindow"></div>`;
+        updateOdometerDOM(pipWindow.document.getElementById('pipOdoWindow'), currentCount, 56);
+        pipWindow.document.body.onclick = () => changeBy(1);
+        pipWindow.document.body.oncontextmenu = (e) => { e.preventDefault(); changeBy(-1); };
         pipWindow.addEventListener('keydown', handleKeydown);
         return;
       } catch {}
     }
-    window.open(`${location.pathname}?mini=1&room=${encodeURIComponent(room)}`, 'CounterMini', 'width=250,height=125,menubar=no,toolbar=no,location=no,status=no');
+    window.open(`${location.pathname}?mini=1&room=${encodeURIComponent(room)}`, 'CounterMini', 'width=220,height=95,menubar=no,toolbar=no,location=no,status=no');
   });
 
-  // Download native Windows Game Overlay (.bat) that captures global hotkeys while in-game
-  overlayBtn.addEventListener('click', () => {
+  // Download 1-click Background Key Listener (.bat) — C# compiled in-memory, works locally AND directly with cloud if browser blocks HTTP loopback
+  bgBtn.addEventListener('click', () => {
     const bat = `@echo off
-title Contador Overlay (Modo Jogo)
+title Contador - Captura em 2o Plano (${incLabel} / ${decLabel})
+echo =========================================================
+echo  CAPTURA EM 2o PLANO ATIVA!
+echo  Tecla +1: ${incLabel}  ^|  Tecla -1: ${decLabel}
+echo  Pode minimizar esta janela e jogar normalmente.
+echo =========================================================
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase; ^
-   Add-Type -MemberDefinition '[DllImport(\\"user32.dll\\")] public static extern short GetAsyncKeyState(int vKey);' -Name Win32 -Namespace Native; ^
-   $topic = '${NTFY_TOPIC}'; ^
-   $incVk = ${incVk}; $decVk = ${decVk}; ^
-   $incName = '${incLabel.replace(/'/g, '')}'; $decName = '${decLabel.replace(/'/g, '')}'; ^
-   $count = ${currentCount}; ^
-   $w = New-Object Windows.Window; ^
-   $w.WindowStyle = 'None'; $w.AllowsTransparency = $true; $w.Background = '#D90B0D10'; ^
-   $w.Topmost = $true; $w.Width = 195; $w.Height = 64; $w.Left = 20; $w.Top = 20; ^
-   $w.ResizeMode = 'NoResize'; ^
-   $b = New-Object Windows.Controls.Border; $b.BorderBrush = '#334155'; $b.BorderThickness = 1; $b.CornerRadius = 8; $b.Padding = '8,4,8,4'; ^
-   $sp = New-Object Windows.Controls.StackPanel; $sp.HorizontalAlignment = 'Center'; $sp.VerticalAlignment = 'Center'; ^
-   $txt = New-Object Windows.Controls.TextBlock; $txt.Text = $count; $txt.FontSize = 22; $txt.FontWeight = 'Bold'; $txt.Foreground = '#38BDF8'; $txt.HorizontalAlignment = 'Center'; ^
-   $sub = New-Object Windows.Controls.TextBlock; $sub.Text = ('+1: ' + $incName + ' | -1: ' + $decName + ' (Arraste)'); $sub.FontSize = 10; $sub.Foreground = '#94A3B8'; $sub.HorizontalAlignment = 'Center'; ^
-   $sp.Children.Add($txt) | Out-Null; $sp.Children.Add($sub) | Out-Null; $b.Child = $sp; $w.Content = $b; ^
-   $w.Add_MouseLeftButtonDown({ $w.DragMove() }); ^
-   $w.Add_MouseRightButtonUp({ $w.Close() }); ^
-   $prevInc = $false; $prevDec = $false; $ticks = 0; ^
-   $timer = New-Object Windows.Threading.DispatcherTimer; $timer.Interval = [TimeSpan]::FromMilliseconds(40); ^
-   $timer.Add_Tick({ ^
-     $isInc = ([Native.Win32]::GetAsyncKeyState($incVk) -band 0x8000) -ne 0; ^
-     $isDec = ([Native.Win32]::GetAsyncKeyState($decVk) -band 0x8000) -ne 0; ^
-     if ($isInc -and -not $script:prevInc) { ^
-       $script:count++; $txt.Text = $script:count; ^
-       Start-Job -ScriptBlock { param($t,$c) Invoke-RestMethod -Uri ('https://ntfy.sh/'+$t) -Method Post -Body (ConvertTo-Json @{count=$c;ts=0}) | Out-Null } -ArgumentList $topic,$script:count | Out-Null; ^
-     } ^
-     if ($isDec -and -not $script:prevDec) { ^
-       $script:count--; $txt.Text = $script:count; ^
-       Start-Job -ScriptBlock { param($t,$c) Invoke-RestMethod -Uri ('https://ntfy.sh/'+$t) -Method Post -Body (ConvertTo-Json @{count=$c;ts=0}) | Out-Null } -ArgumentList $topic,$script:count | Out-Null; ^
-     } ^
-     $script:prevInc = $isInc; $script:prevDec = $isDec; ^
-     $script:ticks++; ^
-     if ($script:ticks -ge 50) { ^
-       $script:ticks = 0; ^
-       try { ^
-         $r = Invoke-RestMethod -Uri ('https://ntfy.sh/'+$topic+'/json?poll=1') -TimeoutSec 1; ^
-         if ($r) { $lines = ($r -split '\\n') | Where-Object { $_ }; $last = ($lines[-1] | ConvertFrom-Json).message | ConvertFrom-Json; if ($null -ne $last.count) { $script:count = [int]$last.count; $txt.Text = $script:count } } ^
-       } catch {} ^
-     } ^
-     Get-Job -State Completed | Remove-Job; ^
-   }); ^
-   $timer.Start(); $w.ShowDialog() | Out-Null"
+  "$code = 'using System; using System.Collections.Concurrent; using System.IO; using System.Net; using System.Net.Sockets; using System.Runtime.InteropServices; using System.Text; using System.Threading; public class KeyBridge { [DllImport(\"user32.dll\")] public static extern short GetAsyncKeyState(int vKey); public static volatile int IncVk = ${incVk}; public static volatile int DecVk = ${decVk}; public static volatile int Count = ${currentCount}; public static string Topic = \"${NTFY_TOPIC}\"; private static ConcurrentDictionary<int, Stream> clients = new ConcurrentDictionary<int, Stream>(); private static int nextId = 0; private static int dirty = 0; public static void Start(int port) { ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12; new Thread(KeyLoop) { IsBackground = true }.Start(); new Thread(CloudSyncLoop) { IsBackground = true }.Start(); TcpListener l = new TcpListener(IPAddress.Loopback, port); l.Start(); while (true) { try { ThreadPool.QueueUserWorkItem(Handle, l.AcceptTcpClient()); } catch { Thread.Sleep(50); } } } private static void KeyLoop() { bool pI = false, pD = false; while (true) { bool i = (GetAsyncKeyState(IncVk) & 0x8000) != 0; bool d = (GetAsyncKeyState(DecVk) & 0x8000) != 0; if (i && !pI) { Count++; Broadcast(\"{\\\"delta\\\":1,\\\"count\\\":\" + Count + \"}\"); Interlocked.Exchange(ref dirty, 1); } if (d && !pD) { if (Count > 0) Count--; Broadcast(\"{\\\"delta\\\":-1,\\\"count\\\":\" + Count + \"}\"); Interlocked.Exchange(ref dirty, 1); } pI = i; pD = d; Thread.Sleep(8); } } private static void CloudSyncLoop() { WebClient wc = new WebClient(); while (true) { if (Interlocked.Exchange(ref dirty, 0) == 1 && clients.IsEmpty) { try { wc.UploadString(\"https://ntfy.sh/\" + Topic, \"{\\\"count\\\":\" + Count + \",\\\"ts\\\":0}\"); } catch {} } Thread.Sleep(120); } } private static void Broadcast(string j) { byte[] m = Encoding.UTF8.GetBytes(\"data: \" + j + \"\\n\\n\"); foreach (var kv in clients) { try { kv.Value.Write(m, 0, m.Length); kv.Value.Flush(); } catch { Stream r; clients.TryRemove(kv.Key, out r); } } } private static void Handle(object o) { TcpClient c = (TcpClient)o; try { NetworkStream s = c.GetStream(); byte[] b = new byte[1024]; int n = s.Read(b, 0, b.Length); if (n <= 0) { c.Close(); return; } string req = Encoding.ASCII.GetString(b, 0, n).Split((char)13, (char)10)[0]; if (req.StartsWith(\"OPTIONS \")) { byte[] r = Encoding.ASCII.GetBytes(\"HTTP/1.1 204 No Content\\r\\nAccess-Control-Allow-Origin: *\\r\\nAccess-Control-Allow-Private-Network: true\\r\\n\\r\\n\"); s.Write(r, 0, r.Length); c.Close(); return; } if (req.Contains(\"/config?\")) { string qs = req.Split((char)63)[1].Split((char)32)[0]; foreach (string p in qs.Split((char)38)) { string[] kv = p.Split((char)61); int v; if (kv.Length == 2 && int.TryParse(kv[1], out v)) { if (kv[0] == \"inc\") IncVk = v; if (kv[0] == \"dec\") DecVk = v; } } byte[] r = Encoding.ASCII.GetBytes(\"HTTP/1.1 200 OK\\r\\nAccess-Control-Allow-Origin: *\\r\\nAccess-Control-Allow-Private-Network: true\\r\\nContent-Length: 2\\r\\n\\r\\n{}\"); s.Write(r, 0, r.Length); c.Close(); return; } if (req.Contains(\"/events\")) { byte[] r = Encoding.ASCII.GetBytes(\"HTTP/1.1 200 OK\\r\\nContent-Type: text/event-stream\\r\\nCache-Control: no-cache\\r\\nAccess-Control-Allow-Origin: *\\r\\nAccess-Control-Allow-Private-Network: true\\r\\n\\r\\ndata: {}\\n\\n\"); s.Write(r, 0, r.Length); s.Flush(); clients[Interlocked.Increment(ref nextId)] = s; return; } c.Close(); } catch { try { c.Close(); } catch {} } } }'; Add-Type -TypeDefinition $code -Language CSharp; [KeyBridge]::Start(31337)"
 `;
     const blob = new Blob([bat.replace(/\r?\n/g, '\r\n')], { type: 'application/bat' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'ContadorOverlay.bat';
+    a.download = 'SegundoPlano.bat';
     a.click();
   });
 
-  initialSync();
-  connectRealtime();
-  setInterval(initialSync, 4000);
+  if (!isMini) {
+    pollRemote();
+    ensureLeaderSSE();
+    connectBgBridge();
+    setInterval(() => {
+      pollRemote();
+      ensureLeaderSSE();
+      connectBgBridge();
+    }, 3000);
+  }
 </script>
 </body>
 </html>

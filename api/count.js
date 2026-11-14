@@ -107,9 +107,16 @@ module.exports = async (req, res) => {
       return res.status(200).json({ count: nextVal, topic });
     }
 
+    if (hasExplicitValue) {
+      const nextVal = Math.max(0, Math.trunc(body.value));
+      fallbackCount = nextVal;
+      await setNtfyCount(topic, nextVal);
+      return res.status(200).json({ count: nextVal, topic });
+    }
+
     const currentCloud = await getNtfyCount(topic);
     const base = currentCloud !== null ? currentCloud : fallbackCount;
-    const nextVal = hasExplicitValue ? Math.trunc(body.value) : base + Math.trunc(delta);
+    const nextVal = Math.max(0, base + Math.trunc(delta));
     fallbackCount = nextVal;
     await setNtfyCount(topic, nextVal);
     return res.status(200).json({ count: nextVal, topic });
