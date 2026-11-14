@@ -463,18 +463,17 @@
     schedulePush();
   }
 
-  // Leader election so opening 10+ windows doesn't exhaust browser HTTP/SSE sockets
+  // Leader election so opening 10+ windows doesn't exhaust browser HTTP/SSE sockets, but mini window takes over if main tab is closed/throttled
   const tabId = Math.random().toString(36).slice(2);
   let remoteEs = null;
 
   function isLeaderTab() {
-    if (isMini) return false;
     const now = Date.now();
     const raw = localStorage.getItem(`counter_leader_${room}`);
     if (raw) {
       try {
         const leader = JSON.parse(raw);
-        if (leader.id !== tabId && now - leader.ts < 5000) return false;
+        if (leader.id !== tabId && now - leader.ts < 4500) return false;
       } catch {}
     }
     localStorage.setItem(`counter_leader_${room}`, JSON.stringify({ id: tabId, ts: now }));
@@ -503,6 +502,15 @@
     }
   }
 
+  function handleNtfyMessage(e) {
+    if (Date.now() - lastLocalEditTs < 900) return;
+    try {
+      const data = JSON.parse(e.data);
+      const val = typeof data.count === 'number' ? data.count : (data.message ? JSON.parse(data.message).count : null);
+      if (typeof val === 'number' && val !== currentCount) render(val, true);
+    } catch {}
+  }
+
   function ensureLeaderSSE() {
     if (!isLeaderTab()) {
       if (remoteEs) { remoteEs.close(); remoteEs = null; }
@@ -510,24 +518,18 @@
     }
     if (remoteEs) return;
     remoteEs = new EventSource(`https://ntfy.sh/${encodeURIComponent(NTFY_TOPIC)}/sse`);
-    remoteEs.onmessage = (e) => {
-      if (Date.now() - lastLocalEditTs < 1200) return;
-      try {
-        const data = JSON.parse(e.data);
-        const val = typeof data.count === 'number' ? data.count : (data.message ? JSON.parse(data.message).count : null);
-        if (typeof val === 'number' && val !== currentCount) render(val, true);
-      } catch {}
-    };
+    remoteEs.onmessage = handleNtfyMessage;
+    remoteEs.addEventListener('message', handleNtfyMessage);
   }
 
   // Local Background Key Bridge (127.0.0.1:31337) for detecting keys while in another tab/window/game
   let bgEs = null;
   function syncBgKeys() {
-    fetch(`http://127.0.0.1:31337/config?inc=${incVk}&dec=${decVk}`).catch(() => {});
+    fetch(`http://127.0.0.1:31337/config?inc=${incVk}&dec=${decVk}&count=${currentCount}`).catch(() => {});
   }
 
   function connectBgBridge() {
-    if (isMini || bgEs) return;
+    if (bgEs) return;
     try {
       bgEs = new EventSource('http://127.0.0.1:31337/events');
       bgEs.onopen = () => {
@@ -666,35 +668,165 @@
     window.open(`${location.pathname}?mini=1&room=${encodeURIComponent(room)}`, 'CounterMini', 'width=220,height=95,menubar=no,toolbar=no,location=no,status=no');
   });
 
-  // Download 1-click Background Key Listener (.bat) — C# compiled in-memory, works locally AND directly with cloud if browser blocks HTTP loopback
+  function toBase64Utf16LE(str) {
+    const bytes = new Uint8Array(str.length * 2);
+    for (let i = 0; i < str.length; i++) {
+      const c = str.charCodeAt(i);
+      bytes[i * 2] = c & 0xff;
+      bytes[i * 2 + 1] = (c >> 8) & 0xff;
+    }
+    let bin = '';
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+
+  // Download 1-click Background Key Listener (.bat) — Base64 EncodedCommand (zero quote issues), C# compiled in-memory
   bgBtn.addEventListener('click', () => {
-    const bat = `@echo off
-title Contador - Captura em 2o Plano (${incLabel} / ${decLabel})
-echo =========================================================
-echo  CAPTURA EM 2o PLANO ATIVA!
-echo  Tecla +1: ${incLabel}  ^|  Tecla -1: ${decLabel}
-echo  Pode minimizar esta janela e jogar normalmente.
-echo =========================================================
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$code = 'using System; using System.Collections.Concurrent; using System.IO; using System.Net; using System.Net.Sockets; using System.Runtime.InteropServices; using System.Text; using System.Threading; public class KeyBridge { [DllImport(\"user32.dll\")] public static extern short GetAsyncKeyState(int vKey); public static volatile int IncVk = ${incVk}; public static volatile int DecVk = ${decVk}; public static volatile int Count = ${currentCount}; public static string Topic = \"${NTFY_TOPIC}\"; private static ConcurrentDictionary<int, Stream> clients = new ConcurrentDictionary<int, Stream>(); private static int nextId = 0; private static int dirty = 0; public static void Start(int port) { ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12; new Thread(KeyLoop) { IsBackground = true }.Start(); new Thread(CloudSyncLoop) { IsBackground = true }.Start(); TcpListener l = new TcpListener(IPAddress.Loopback, port); l.Start(); while (true) { try { ThreadPool.QueueUserWorkItem(Handle, l.AcceptTcpClient()); } catch { Thread.Sleep(50); } } } private static void KeyLoop() { bool pI = false, pD = false; while (true) { bool i = (GetAsyncKeyState(IncVk) & 0x8000) != 0; bool d = (GetAsyncKeyState(DecVk) & 0x8000) != 0; if (i && !pI) { Count++; Broadcast(\"{\\\"delta\\\":1,\\\"count\\\":\" + Count + \"}\"); Interlocked.Exchange(ref dirty, 1); } if (d && !pD) { if (Count > 0) Count--; Broadcast(\"{\\\"delta\\\":-1,\\\"count\\\":\" + Count + \"}\"); Interlocked.Exchange(ref dirty, 1); } pI = i; pD = d; Thread.Sleep(8); } } private static void CloudSyncLoop() { WebClient wc = new WebClient(); while (true) { if (Interlocked.Exchange(ref dirty, 0) == 1 && clients.IsEmpty) { try { wc.UploadString(\"https://ntfy.sh/\" + Topic, \"{\\\"count\\\":\" + Count + \",\\\"ts\\\":0}\"); } catch {} } Thread.Sleep(120); } } private static void Broadcast(string j) { byte[] m = Encoding.UTF8.GetBytes(\"data: \" + j + \"\\n\\n\"); foreach (var kv in clients) { try { kv.Value.Write(m, 0, m.Length); kv.Value.Flush(); } catch { Stream r; clients.TryRemove(kv.Key, out r); } } } private static void Handle(object o) { TcpClient c = (TcpClient)o; try { NetworkStream s = c.GetStream(); byte[] b = new byte[1024]; int n = s.Read(b, 0, b.Length); if (n <= 0) { c.Close(); return; } string req = Encoding.ASCII.GetString(b, 0, n).Split((char)13, (char)10)[0]; if (req.StartsWith(\"OPTIONS \")) { byte[] r = Encoding.ASCII.GetBytes(\"HTTP/1.1 204 No Content\\r\\nAccess-Control-Allow-Origin: *\\r\\nAccess-Control-Allow-Private-Network: true\\r\\n\\r\\n\"); s.Write(r, 0, r.Length); c.Close(); return; } if (req.Contains(\"/config?\")) { string qs = req.Split((char)63)[1].Split((char)32)[0]; foreach (string p in qs.Split((char)38)) { string[] kv = p.Split((char)61); int v; if (kv.Length == 2 && int.TryParse(kv[1], out v)) { if (kv[0] == \"inc\") IncVk = v; if (kv[0] == \"dec\") DecVk = v; } } byte[] r = Encoding.ASCII.GetBytes(\"HTTP/1.1 200 OK\\r\\nAccess-Control-Allow-Origin: *\\r\\nAccess-Control-Allow-Private-Network: true\\r\\nContent-Length: 2\\r\\n\\r\\n{}\"); s.Write(r, 0, r.Length); c.Close(); return; } if (req.Contains(\"/events\")) { byte[] r = Encoding.ASCII.GetBytes(\"HTTP/1.1 200 OK\\r\\nContent-Type: text/event-stream\\r\\nCache-Control: no-cache\\r\\nAccess-Control-Allow-Origin: *\\r\\nAccess-Control-Allow-Private-Network: true\\r\\n\\r\\ndata: {}\\n\\n\"); s.Write(r, 0, r.Length); s.Flush(); clients[Interlocked.Increment(ref nextId)] = s; return; } c.Close(); } catch { try { c.Close(); } catch {} } } }'; Add-Type -TypeDefinition $code -Language CSharp; [KeyBridge]::Start(31337)"
+    const psScript = `
+$ErrorActionPreference = 'SilentlyContinue'
+Get-NetTCPConnection -LocalPort 31337 -ErrorAction SilentlyContinue | ForEach-Object {
+  if ($_.OwningProcess -and $_.OwningProcess -ne $PID) { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
+}
+$code = @'
+using System;
+using System.Collections.Concurrent;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
+
+public class KeyBridge {
+    [DllImport("user32.dll")]
+    public static extern short GetAsyncKeyState(int vKey);
+    public static volatile int IncVk = ${incVk};
+    public static volatile int DecVk = ${decVk};
+    public static int Count = ${currentCount};
+    public static string Topic = "${NTFY_TOPIC}";
+    private static ConcurrentDictionary<int, Stream> clients = new ConcurrentDictionary<int, Stream>();
+    private static int nextId = 0;
+    private static int dirty = 0;
+
+    public static void Start(int port) {
+        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+        ServicePointManager.DefaultConnectionLimit = 10;
+        new Thread(KeyLoop) { IsBackground = true }.Start();
+        new Thread(CloudSyncLoop) { IsBackground = true }.Start();
+        TcpListener l = new TcpListener(IPAddress.Loopback, port);
+        l.Start();
+        Console.WriteLine("[OK] Captura em 2o plano ativa! Pode minimizar e jogar.");
+        while (true) {
+            try { ThreadPool.QueueUserWorkItem(Handle, l.AcceptTcpClient()); } catch { Thread.Sleep(50); }
+        }
+    }
+
+    private static void KeyLoop() {
+        bool pI = false, pD = false;
+        while (true) {
+            bool i = (GetAsyncKeyState(IncVk) & 0x8000) != 0;
+            bool d = (GetAsyncKeyState(DecVk) & 0x8000) != 0;
+            if (i && !pI) {
+                int c = Interlocked.Increment(ref Count);
+                Console.WriteLine("[+1] Contador: " + c);
+                Broadcast("{\\"delta\\":1,\\"count\\":" + c + "}");
+                Interlocked.Exchange(ref dirty, 1);
+            }
+            if (d && !pD) {
+                int c = Count > 0 ? Interlocked.Decrement(ref Count) : 0;
+                if (c < 0) { Count = 0; c = 0; }
+                Console.WriteLine("[-1] Contador: " + c);
+                Broadcast("{\\"delta\\":-1,\\"count\\":" + c + "}");
+                Interlocked.Exchange(ref dirty, 1);
+            }
+            pI = i; pD = d;
+            Thread.Sleep(8);
+        }
+    }
+
+    private static void CloudSyncLoop() {
+        while (true) {
+            if (Interlocked.Exchange(ref dirty, 0) == 1) {
+                int c = Count;
+                try {
+                    HttpWebRequest req = (HttpWebRequest)WebRequest.Create("https://ntfy.sh/" + Topic);
+                    req.Method = "POST";
+                    req.Timeout = 4000;
+                    byte[] body = Encoding.UTF8.GetBytes("{\\"count\\":" + c + ",\\"ts\\":" + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + "}");
+                    req.ContentLength = body.Length;
+                    using (Stream s = req.GetRequestStream()) { s.Write(body, 0, body.Length); }
+                    using (WebResponse r = req.GetResponse()) {}
+                } catch {}
+            }
+            Thread.Sleep(60);
+        }
+    }
+
+    private static void Broadcast(string j) {
+        byte[] m = Encoding.UTF8.GetBytes("data: " + j + "\\n\\n");
+        foreach (var kv in clients) {
+            try { kv.Value.Write(m, 0, m.Length); kv.Value.Flush(); }
+            catch { Stream r; clients.TryRemove(kv.Key, out r); }
+        }
+    }
+
+    private static void Handle(object o) {
+        TcpClient c = (TcpClient)o;
+        try {
+            NetworkStream s = c.GetStream();
+            byte[] b = new byte[1024];
+            int n = s.Read(b, 0, b.Length);
+            if (n <= 0) { c.Close(); return; }
+            string req = Encoding.ASCII.GetString(b, 0, n).Split('\\r', '\\n')[0];
+            if (req.StartsWith("OPTIONS ")) {
+                byte[] r = Encoding.ASCII.GetBytes("HTTP/1.1 204 No Content\\r\\nAccess-Control-Allow-Origin: *\\r\\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\\r\\nAccess-Control-Allow-Headers: *\\r\\nAccess-Control-Allow-Private-Network: true\\r\\n\\r\\n");
+                s.Write(r, 0, r.Length); c.Close(); return;
+            }
+            if (req.Contains("/config?")) {
+                string qs = req.Split('?')[1].Split(' ')[0];
+                foreach (string p in qs.Split('&')) {
+                    string[] kv = p.Split('=');
+                    int v;
+                    if (kv.Length == 2 && int.TryParse(kv[1], out v) && v >= 0) {
+                        if (kv[0] == "inc" && v > 0 && v < 256) IncVk = v;
+                        if (kv[0] == "dec" && v > 0 && v < 256) DecVk = v;
+                        if (kv[0] == "count") Count = v;
+                    }
+                }
+                byte[] r = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\\r\\nAccess-Control-Allow-Origin: *\\r\\nAccess-Control-Allow-Private-Network: true\\r\\nContent-Length: 2\\r\\n\\r\\n{}");
+                s.Write(r, 0, r.Length); c.Close(); return;
+            }
+            if (req.Contains("/events")) {
+                byte[] r = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\\r\\nContent-Type: text/event-stream\\r\\nCache-Control: no-cache\\r\\nConnection: keep-alive\\r\\nAccess-Control-Allow-Origin: *\\r\\nAccess-Control-Allow-Private-Network: true\\r\\n\\r\\ndata: {\\"connected\\":true}\\n\\n");
+                s.Write(r, 0, r.Length); s.Flush();
+                clients[Interlocked.Increment(ref nextId)] = s;
+                return;
+            }
+            c.Close();
+        } catch { try { c.Close(); } catch {} }
+    }
+}
+'@
+Add-Type -TypeDefinition $code -Language CSharp
+[KeyBridge]::Start(31337)
 `;
-    const blob = new Blob([bat.replace(/\r?\n/g, '\r\n')], { type: 'application/bat' });
+    const encoded = toBase64Utf16LE(psScript);
+    const bat = `@echo off\r\ntitle Contador - Captura em 2o Plano (${incLabel} / ${decLabel})\r\necho =========================================================\r\necho  CAPTURA EM 2o PLANO ATIVA!\r\necho  Tecla +1: ${incLabel}   ^|   Tecla -1: ${decLabel}\r\necho  Pode minimizar esta janela e jogar normalmente.\r\necho =========================================================\r\npowershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${encoded}\r\npause\r\n`;
+    const blob = new Blob([bat], { type: 'application/bat' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'SegundoPlano.bat';
     a.click();
   });
 
-  if (!isMini) {
+  pollRemote();
+  ensureLeaderSSE();
+  connectBgBridge();
+  setInterval(() => {
     pollRemote();
     ensureLeaderSSE();
     connectBgBridge();
-    setInterval(() => {
-      pollRemote();
-      ensureLeaderSSE();
-      connectBgBridge();
-    }, 3000);
-  }
+  }, 2500);
 </script>
 </body>
 </html>
