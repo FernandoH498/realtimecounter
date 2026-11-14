@@ -125,7 +125,9 @@ const HTML = `<!DOCTYPE html>
 </html>`;
 
 const server = http.createServer((req, res) => {
-  if (req.method === 'GET' && req.url === '/events') {
+  const pathname = (req.url || '/').split('?')[0];
+
+  if (req.method === 'GET' && pathname === '/events') {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
@@ -138,22 +140,34 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (req.method === 'GET' && (req.url === '/api/count' || req.url === '/count')) {
+  if (req.method === 'GET' && (pathname === '/api/count' || pathname === '/count')) {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
     res.end(JSON.stringify({ count }));
     return;
   }
 
-  if (req.method === 'POST' && (req.url === '/api/count' || req.url === '/inc')) {
-    count += 1;
-    try { fs.writeFileSync(DATA_FILE, String(count)); } catch {}
-    broadcast();
-    res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
-    res.end(JSON.stringify({ count }));
+  if (req.method === 'POST' && (pathname === '/api/count' || pathname === '/inc')) {
+    let raw = '';
+    req.on('data', (c) => { raw += c; });
+    req.on('end', () => {
+      let body = {};
+      try { if (raw) body = JSON.parse(raw); } catch {}
+      if (typeof body.value === 'number' && Number.isFinite(body.value)) {
+        count = Math.trunc(body.value);
+      } else {
+        const delta = typeof body.delta === 'number' && Number.isFinite(body.delta) ? Math.trunc(body.delta) : 1;
+        count += delta;
+      }
+      // ponytail: sync file write on single counter integer, upgrade to debounced write above ~1k req/s
+      try { fs.writeFileSync(DATA_FILE, String(count)); } catch {}
+      broadcast();
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.end(JSON.stringify({ count }));
+    });
     return;
   }
 
-  if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) {
+  if (req.method === 'GET' && (pathname === '/' || pathname === '/index.html')) {
     const htmlPath = path.join(__dirname, 'public', 'index.html');
     if (fs.existsSync(htmlPath)) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -180,12 +194,17 @@ if (require.main === module) {
         res.on('data', (chunk) => {
           chunks.push(chunk.toString());
           if (chunks.length === 1) {
-            const req = http.request(`${base}/inc`, { method: 'POST' }, (r) => assert.strictEqual(r.statusCode, 204));
-            req.end();
+            const req = http.request(`${base}/api/count`, { method: 'POST', headers: { 'Content-Type': 'application/json' } }, (r) => assert.strictEqual(r.statusCode, 200));
+            req.end(JSON.stringify({ delta: 1 }));
           } else if (chunks.length === 2) {
+            const req = http.request(`${base}/api/count`, { method: 'POST', headers: { 'Content-Type': 'application/json' } }, (r) => assert.strictEqual(r.statusCode, 200));
+            req.end(JSON.stringify({ delta: -1 }));
+          } else if (chunks.length === 3) {
             const v0 = parseInt(chunks[0].replace('data: ', ''), 10);
             const v1 = parseInt(chunks[1].replace('data: ', ''), 10);
+            const v2 = parseInt(chunks[2].replace('data: ', ''), 10);
             assert.strictEqual(v1, v0 + 1);
+            assert.strictEqual(v2, v0);
             res.destroy();
             server.close(() => process.exit(0));
           }

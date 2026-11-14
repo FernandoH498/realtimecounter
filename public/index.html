@@ -9,127 +9,378 @@
   body {
     background: #0b0d10; color: #f0f4f8; font-family: system-ui, -apple-system, sans-serif;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    min-height: 100vh; gap: 2rem; padding: 1.5rem;
+    min-height: 100vh; gap: 1rem; padding: 1rem;
+  }
+  .card {
+    background: #151921; border: 1px solid #262c3a; padding: 1.25rem 1.5rem;
+    border-radius: 12px; display: flex; flex-direction: column; align-items: center;
+    gap: 0.9rem; width: 100%; max-width: 390px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+  .counter-row {
+    display: flex; align-items: center; justify-content: center; gap: 0.85rem; width: 100%;
   }
   #count {
-    font-size: clamp(5rem, 20vw, 12rem); font-weight: 800; font-variant-numeric: tabular-nums;
-    letter-spacing: -0.03em; color: #38bdf8; text-shadow: 0 0 40px rgba(56,189,248,0.25);
-    transition: transform 0.06s ease-out; cursor: pointer;
+    font-size: 2.25rem; font-weight: 800; font-variant-numeric: tabular-nums;
+    color: #38bdf8; min-width: 5.5rem; text-align: center;
+    background: #0f1319; border: 1px solid #1e293b; border-radius: 8px;
+    padding: 0.25rem 0.75rem; transition: transform 0.06s ease-out; cursor: pointer;
   }
   #count.bump { transform: scale(1.06); }
-  .controls {
-    display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
-    background: #151921; border: 1px solid #262c3a; padding: 1.25rem 1.75rem; border-radius: 12px;
+  .step-btn {
+    background: #1e293b; color: #f8fafc; border: 1px solid #334155;
+    width: 2.5rem; height: 2.5rem; border-radius: 8px; font-size: 1.15rem;
+    font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;
   }
-  .row { display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; color: #94a3b8; }
+  .step-btn:hover { background: #334155; }
+  .step-btn.plus { background: #0284c7; border-color: #38bdf8; }
+  .step-btn.plus:hover { background: #0369a1; }
+  .row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.5rem; font-size: 0.85rem; color: #94a3b8; width: 100%;
+  }
   kbd {
-    background: #1e2530; border: 1px solid #334155; border-bottom-width: 3px;
-    padding: 0.35rem 0.75rem; border-radius: 6px; color: #f8fafc; font-family: monospace;
-    font-size: 1rem; font-weight: 700; min-width: 2.5rem; text-align: center;
+    background: #1e2530; border: 1px solid #334155; border-bottom-width: 2px;
+    padding: 0.25rem 0.55rem; border-radius: 5px; color: #f8fafc; font-family: monospace;
+    font-size: 0.85rem; font-weight: 700; min-width: 3.2rem; text-align: center;
   }
   button {
-    background: #2563eb; color: #fff; border: none; padding: 0.45rem 0.9rem;
-    border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.875rem;
+    background: #2563eb; color: #fff; border: none; padding: 0.38rem 0.7rem;
+    border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.8rem;
   }
   button:hover { background: #1d4ed8; }
+  button.secondary { background: #1e293b; border: 1px solid #334155; color: #cbd5e1; }
+  button.secondary:hover { background: #334155; }
   button.listening { background: #dc2626; animation: pulse 1s infinite; }
-  .status { font-size: 0.8rem; color: #64748b; }
-  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; margin-right: 6px; }
+  input[type="number"], input[type="text"] {
+    background: #0f1319; border: 1px solid #334155; color: #f8fafc;
+    border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.85rem; width: 6.5rem;
+    user-select: text;
+  }
+  .divider { width: 100%; height: 1px; background: #262c3a; }
+  .actions { display: flex; gap: 0.5rem; width: 100%; flex-wrap: wrap; }
+  .actions button { flex: 1; min-width: 140px; padding: 0.5rem; }
+  .status { font-size: 0.75rem; color: #64748b; display: flex; align-items: center; gap: 5px; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
   .dot.off { background: #ef4444; }
-  .tip { font-size: 0.75rem; color: #475569; }
+  body.mini .hide-mini { display: none !important; }
+  body.mini { padding: 0.35rem; gap: 0.3rem; min-height: 100vh; }
+  body.mini .card { padding: 0.5rem 0.75rem; gap: 0.4rem; border: none; background: transparent; box-shadow: none; }
+  body.mini #count { font-size: 1.65rem; min-width: 4rem; padding: 0.15rem 0.5rem; }
   @keyframes pulse { 50% { opacity: 0.7; } }
 </style>
 </head>
 <body>
-  <div id="count" title="Clique ou pressione a tecla configurada">0</div>
-  <div class="controls">
-    <div class="row">
-      <span>Tecla de disparo:</span>
-      <kbd id="keyDisplay">Space</kbd>
-      <button id="bindBtn">Trocar tecla</button>
+  <div class="card" id="mainCard">
+    <div class="counter-row">
+      <button class="step-btn" id="decBtn" title="Diminuir -1">-1</button>
+      <div id="count" title="Clique para +1">0</div>
+      <button class="step-btn plus" id="incBtn" title="Aumentar +1">+1</button>
     </div>
-    <div class="status"><span id="dot" class="dot"></span><span id="statusText">Conectado</span></div>
-    <div class="tip">Funciona local e no Vercel (Polling a cada 800ms)</div>
+
+    <div class="row hide-mini">
+      <span>Tecla +1:</span>
+      <kbd id="incKeyDisplay">Space</kbd>
+      <button id="bindIncBtn" class="secondary">Trocar</button>
+    </div>
+
+    <div class="row hide-mini">
+      <span>Tecla -1 (Voltar):</span>
+      <kbd id="decKeyDisplay">Minus</kbd>
+      <button id="bindDecBtn" class="secondary">Trocar</button>
+    </div>
+
+    <div class="divider hide-mini"></div>
+
+    <div class="row hide-mini">
+      <span>Salvar nº:</span>
+      <input type="number" id="setInput" placeholder="Valor...">
+      <button id="setBtn">Salvar</button>
+      <button id="resetBtn" class="secondary" title="Voltar para 0">Zerar</button>
+    </div>
+
+    <div class="divider hide-mini"></div>
+
+    <div class="actions hide-mini">
+      <button id="pipBtn" title="Destacar mini janela sempre no topo fora do navegador">Janela Flutuante (PiP)</button>
+      <button id="overlayBtn" class="secondary" title="Baixar mini overlay para Windows que funciona com tecla global dentro do jogo">Overlay p/ Jogo (.bat)</button>
+    </div>
+
+    <div class="status">
+      <span id="dot" class="dot"></span>
+      <span id="statusText">Sincronizando...</span>
+    </div>
   </div>
+
 <script>
+  const params = new URLSearchParams(location.search);
+  if (params.get('mini') === '1') document.body.classList.add('mini');
+  const room = params.get('room') || 'global';
+  const NTFY_TOPIC = `diogo_rt_counter_global_v2_${room}`;
+
   const countEl = document.getElementById('count');
-  const keyDisplay = document.getElementById('keyDisplay');
-  const bindBtn = document.getElementById('bindBtn');
+  const incBtn = document.getElementById('incBtn');
+  const decBtn = document.getElementById('decBtn');
+  const incKeyDisplay = document.getElementById('incKeyDisplay');
+  const decKeyDisplay = document.getElementById('decKeyDisplay');
+  const bindIncBtn = document.getElementById('bindIncBtn');
+  const bindDecBtn = document.getElementById('bindDecBtn');
+  const setInput = document.getElementById('setInput');
+  const setBtn = document.getElementById('setBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const pipBtn = document.getElementById('pipBtn');
+  const overlayBtn = document.getElementById('overlayBtn');
   const dot = document.getElementById('dot');
   const statusText = document.getElementById('statusText');
 
-  let currentCount = 0;
-  let targetCode = localStorage.getItem('counter_key_code') || 'Space';
-  let targetLabel = localStorage.getItem('counter_key_label') || 'Space';
-  let listeningForKey = false;
+  let currentCount = parseInt(localStorage.getItem(`counter_val_${room}`), 10) || 0;
+  let incCode = localStorage.getItem('counter_inc_code') || 'Space';
+  let incLabel = localStorage.getItem('counter_inc_label') || 'Space';
+  let incVk = parseInt(localStorage.getItem('counter_inc_vk'), 10) || 32;
 
-  keyDisplay.textContent = targetLabel;
+  let decCode = localStorage.getItem('counter_dec_code') || 'Minus';
+  let decLabel = localStorage.getItem('counter_dec_label') || '-';
+  let decVk = parseInt(localStorage.getItem('counter_dec_vk'), 10) || 189;
+
+  let listeningMode = null; // 'inc' | 'dec' | null
+  let pipWindow = null;
+
+  incKeyDisplay.textContent = incLabel;
+  decKeyDisplay.textContent = decLabel;
+  countEl.textContent = currentCount;
 
   function render(val) {
-    if (val !== currentCount) {
-      currentCount = val;
-      countEl.textContent = val;
-      countEl.classList.add('bump');
-      setTimeout(() => countEl.classList.remove('bump'), 60);
+    const num = Number(val);
+    if (!Number.isFinite(num)) return;
+    currentCount = num;
+    localStorage.setItem(`counter_val_${room}`, String(num));
+    countEl.textContent = num;
+    countEl.classList.add('bump');
+    setTimeout(() => countEl.classList.remove('bump'), 60);
+    if (pipWindow && !pipWindow.closed) {
+      const pipCount = pipWindow.document.getElementById('pipCount');
+      if (pipCount) pipCount.textContent = num;
     }
   }
 
-  async function sync() {
+  async function pushUpdate(payload) {
     try {
-      const res = await fetch('/api/count');
+      const res = await fetch(`/api/count?room=${encodeURIComponent(room)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
       if (res.ok) {
         const data = await res.json();
         render(data.count);
-        dot.classList.remove('off');
-        statusText.textContent = 'Conectado em tempo real';
+        return;
       }
-    } catch {
-      dot.classList.add('off');
-      statusText.textContent = 'Reconectando...';
-    }
-  }
-
-  async function increment() {
-    render(currentCount + 1);
+    } catch {}
+    // Direct ntfy fallback so static or serverless cold starts stay synced
     try {
-      const res = await fetch('/api/count', { method: 'POST' });
-      if (res.ok) {
-        const data = await res.json();
-        render(data.count);
-      }
+      await fetch(`https://ntfy.sh/${encodeURIComponent(NTFY_TOPIC)}`, {
+        method: 'POST',
+        body: JSON.stringify({ count: currentCount, ts: Date.now() })
+      });
     } catch {}
   }
 
-  bindBtn.addEventListener('click', () => {
-    listeningForKey = !listeningForKey;
-    bindBtn.classList.toggle('listening', listeningForKey);
-    bindBtn.textContent = listeningForKey ? 'Pressione qualquer tecla...' : 'Trocar tecla';
-  });
+  function changeBy(delta) {
+    render(currentCount + delta);
+    pushUpdate({ delta });
+  }
 
-  window.addEventListener('keydown', (e) => {
-    if (listeningForKey) {
+  function setExact(value) {
+    const num = Math.trunc(Number(value));
+    if (!Number.isFinite(num)) return;
+    render(num);
+    pushUpdate({ value: num });
+  }
+
+  async function initialSync() {
+    try {
+      const res = await fetch(`/api/count?room=${encodeURIComponent(room)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.count === 'number') {
+          if (data.count === 0 && currentCount !== 0) {
+            setExact(currentCount);
+          } else {
+            render(data.count);
+          }
+          dot.classList.remove('off');
+          statusText.textContent = 'Sincronizado em todos os PCs';
+        }
+      }
+    } catch {
+      dot.classList.add('off');
+      statusText.textContent = 'Modo offline (salvo localmente)';
+    }
+  }
+
+  function connectRealtime() {
+    const es = new EventSource(`https://ntfy.sh/${encodeURIComponent(NTFY_TOPIC)}/sse`);
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (typeof data.count === 'number') render(data.count);
+        else if (data.message) {
+          const inner = JSON.parse(data.message);
+          if (typeof inner.count === 'number') render(inner.count);
+        }
+      } catch {}
+    };
+    es.onopen = () => {
+      dot.classList.remove('off');
+      statusText.textContent = 'Sincronizado em tempo real';
+    };
+  }
+
+  incBtn.addEventListener('click', () => changeBy(1));
+  decBtn.addEventListener('click', () => changeBy(-1));
+  countEl.addEventListener('click', () => changeBy(1));
+
+  setBtn.addEventListener('click', () => {
+    if (setInput.value !== '') {
+      setExact(Number(setInput.value));
+      setInput.value = '';
+    }
+  });
+  setInput.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Enter' && setInput.value !== '') {
+      setExact(Number(setInput.value));
+      setInput.value = '';
+    }
+  });
+  resetBtn.addEventListener('click', () => setExact(0));
+
+  function toggleBind(mode) {
+    listeningMode = listeningMode === mode ? null : mode;
+    bindIncBtn.classList.toggle('listening', listeningMode === 'inc');
+    bindDecBtn.classList.toggle('listening', listeningMode === 'dec');
+    bindIncBtn.textContent = listeningMode === 'inc' ? 'Pressione...' : 'Trocar';
+    bindDecBtn.textContent = listeningMode === 'dec' ? 'Pressione...' : 'Trocar';
+  }
+
+  bindIncBtn.addEventListener('click', () => toggleBind('inc'));
+  bindDecBtn.addEventListener('click', () => toggleBind('dec'));
+
+  function handleKeydown(e) {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    if (listeningMode) {
       e.preventDefault();
-      targetCode = e.code;
-      targetLabel = e.key === ' ' ? 'Space' : e.key.length === 1 ? e.key.toUpperCase() : e.key;
-      localStorage.setItem('counter_key_code', targetCode);
-      localStorage.setItem('counter_key_label', targetLabel);
-      keyDisplay.textContent = targetLabel;
-      listeningForKey = false;
-      bindBtn.classList.remove('listening');
-      bindBtn.textContent = 'Trocar tecla';
+      const label = e.key === ' ' ? 'Space' : e.key.length === 1 ? e.key.toUpperCase() : e.key;
+      const vk = e.keyCode || 32;
+      if (listeningMode === 'inc') {
+        incCode = e.code; incLabel = label; incVk = vk;
+        localStorage.setItem('counter_inc_code', incCode);
+        localStorage.setItem('counter_inc_label', incLabel);
+        localStorage.setItem('counter_inc_vk', String(incVk));
+        incKeyDisplay.textContent = incLabel;
+      } else {
+        decCode = e.code; decLabel = label; decVk = vk;
+        localStorage.setItem('counter_dec_code', decCode);
+        localStorage.setItem('counter_dec_label', decLabel);
+        localStorage.setItem('counter_dec_vk', String(decVk));
+        decKeyDisplay.textContent = decLabel;
+      }
+      toggleBind(null);
       return;
     }
     if (e.repeat) return;
-    if (e.code === targetCode) {
-      e.preventDefault();
-      increment();
+    if (e.code === incCode) { e.preventDefault(); changeBy(1); }
+    else if (e.code === decCode) { e.preventDefault(); changeBy(-1); }
+  }
+
+  window.addEventListener('keydown', handleKeydown);
+
+  // Floating Window outside browser (Document Picture-in-Picture Always-on-Top + Popup fallback)
+  pipBtn.addEventListener('click', async () => {
+    if ('documentPictureInPicture' in window) {
+      try {
+        pipWindow = await window.documentPictureInPicture.requestWindow({ width: 230, height: 95 });
+        pipWindow.document.head.innerHTML = `
+          <style>
+            * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: system-ui, sans-serif; }
+            body { background: #0b0d10; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; gap: 10px; padding: 8px; }
+            button { background: #1e293b; color: #fff; border: 1px solid #334155; border-radius: 6px; width: 34px; height: 34px; font-weight: 700; cursor: pointer; font-size: 14px; }
+            button.plus { background: #0284c7; border-color: #38bdf8; }
+            #pipCount { font-size: 26px; font-weight: 800; color: #38bdf8; min-width: 64px; text-align: center; font-variant-numeric: tabular-nums; cursor: pointer; }
+          </style>
+        `;
+        pipWindow.document.body.innerHTML = `
+          <button id="pipDec">-1</button>
+          <div id="pipCount" title="Clique para +1">${currentCount}</div>
+          <button id="pipInc" class="plus">+1</button>
+        `;
+        pipWindow.document.getElementById('pipDec').onclick = () => changeBy(-1);
+        pipWindow.document.getElementById('pipInc').onclick = () => changeBy(1);
+        pipWindow.document.getElementById('pipCount').onclick = () => changeBy(1);
+        pipWindow.addEventListener('keydown', handleKeydown);
+        return;
+      } catch {}
     }
+    window.open(`${location.pathname}?mini=1&room=${encodeURIComponent(room)}`, 'CounterMini', 'width=250,height=125,menubar=no,toolbar=no,location=no,status=no');
   });
 
-  countEl.addEventListener('click', increment);
+  // Download native Windows Game Overlay (.bat) that captures global hotkeys while in-game
+  overlayBtn.addEventListener('click', () => {
+    const bat = `@echo off
+title Contador Overlay (Modo Jogo)
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase; ^
+   Add-Type -MemberDefinition '[DllImport(\\"user32.dll\\")] public static extern short GetAsyncKeyState(int vKey);' -Name Win32 -Namespace Native; ^
+   $topic = '${NTFY_TOPIC}'; ^
+   $incVk = ${incVk}; $decVk = ${decVk}; ^
+   $incName = '${incLabel.replace(/'/g, '')}'; $decName = '${decLabel.replace(/'/g, '')}'; ^
+   $count = ${currentCount}; ^
+   $w = New-Object Windows.Window; ^
+   $w.WindowStyle = 'None'; $w.AllowsTransparency = $true; $w.Background = '#D90B0D10'; ^
+   $w.Topmost = $true; $w.Width = 195; $w.Height = 64; $w.Left = 20; $w.Top = 20; ^
+   $w.ResizeMode = 'NoResize'; ^
+   $b = New-Object Windows.Controls.Border; $b.BorderBrush = '#334155'; $b.BorderThickness = 1; $b.CornerRadius = 8; $b.Padding = '8,4,8,4'; ^
+   $sp = New-Object Windows.Controls.StackPanel; $sp.HorizontalAlignment = 'Center'; $sp.VerticalAlignment = 'Center'; ^
+   $txt = New-Object Windows.Controls.TextBlock; $txt.Text = $count; $txt.FontSize = 22; $txt.FontWeight = 'Bold'; $txt.Foreground = '#38BDF8'; $txt.HorizontalAlignment = 'Center'; ^
+   $sub = New-Object Windows.Controls.TextBlock; $sub.Text = ('+1: ' + $incName + ' | -1: ' + $decName + ' (Arraste)'); $sub.FontSize = 10; $sub.Foreground = '#94A3B8'; $sub.HorizontalAlignment = 'Center'; ^
+   $sp.Children.Add($txt) | Out-Null; $sp.Children.Add($sub) | Out-Null; $b.Child = $sp; $w.Content = $b; ^
+   $w.Add_MouseLeftButtonDown({ $w.DragMove() }); ^
+   $w.Add_MouseRightButtonUp({ $w.Close() }); ^
+   $prevInc = $false; $prevDec = $false; $ticks = 0; ^
+   $timer = New-Object Windows.Threading.DispatcherTimer; $timer.Interval = [TimeSpan]::FromMilliseconds(40); ^
+   $timer.Add_Tick({ ^
+     $isInc = ([Native.Win32]::GetAsyncKeyState($incVk) -band 0x8000) -ne 0; ^
+     $isDec = ([Native.Win32]::GetAsyncKeyState($decVk) -band 0x8000) -ne 0; ^
+     if ($isInc -and -not $script:prevInc) { ^
+       $script:count++; $txt.Text = $script:count; ^
+       Start-Job -ScriptBlock { param($t,$c) Invoke-RestMethod -Uri ('https://ntfy.sh/'+$t) -Method Post -Body (ConvertTo-Json @{count=$c;ts=0}) | Out-Null } -ArgumentList $topic,$script:count | Out-Null; ^
+     } ^
+     if ($isDec -and -not $script:prevDec) { ^
+       $script:count--; $txt.Text = $script:count; ^
+       Start-Job -ScriptBlock { param($t,$c) Invoke-RestMethod -Uri ('https://ntfy.sh/'+$t) -Method Post -Body (ConvertTo-Json @{count=$c;ts=0}) | Out-Null } -ArgumentList $topic,$script:count | Out-Null; ^
+     } ^
+     $script:prevInc = $isInc; $script:prevDec = $isDec; ^
+     $script:ticks++; ^
+     if ($script:ticks -ge 50) { ^
+       $script:ticks = 0; ^
+       try { ^
+         $r = Invoke-RestMethod -Uri ('https://ntfy.sh/'+$topic+'/json?poll=1') -TimeoutSec 1; ^
+         if ($r) { $lines = ($r -split '\\n') | Where-Object { $_ }; $last = ($lines[-1] | ConvertFrom-Json).message | ConvertFrom-Json; if ($null -ne $last.count) { $script:count = [int]$last.count; $txt.Text = $script:count } } ^
+       } catch {} ^
+     } ^
+     Get-Job -State Completed | Remove-Job; ^
+   }); ^
+   $timer.Start(); $w.ShowDialog() | Out-Null"
+`;
+    const blob = new Blob([bat.replace(/\r?\n/g, '\r\n')], { type: 'application/bat' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'ContadorOverlay.bat';
+    a.click();
+  });
 
-  sync();
-  setInterval(sync, 800);
+  initialSync();
+  connectRealtime();
+  setInterval(initialSync, 4000);
 </script>
 </body>
 </html>
