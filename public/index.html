@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Contador em Tempo Real</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body {
+    background: #0b0d10; color: #f0f4f8; font-family: system-ui, -apple-system, sans-serif;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; gap: 2rem; padding: 1.5rem;
+  }
+  #count {
+    font-size: clamp(5rem, 20vw, 12rem); font-weight: 800; font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em; color: #38bdf8; text-shadow: 0 0 40px rgba(56,189,248,0.25);
+    transition: transform 0.06s ease-out; cursor: pointer;
+  }
+  #count.bump { transform: scale(1.06); }
+  .controls {
+    display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+    background: #151921; border: 1px solid #262c3a; padding: 1.25rem 1.75rem; border-radius: 12px;
+  }
+  .row { display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; color: #94a3b8; }
+  kbd {
+    background: #1e2530; border: 1px solid #334155; border-bottom-width: 3px;
+    padding: 0.35rem 0.75rem; border-radius: 6px; color: #f8fafc; font-family: monospace;
+    font-size: 1rem; font-weight: 700; min-width: 2.5rem; text-align: center;
+  }
+  button {
+    background: #2563eb; color: #fff; border: none; padding: 0.45rem 0.9rem;
+    border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.875rem;
+  }
+  button:hover { background: #1d4ed8; }
+  button.listening { background: #dc2626; animation: pulse 1s infinite; }
+  .status { font-size: 0.8rem; color: #64748b; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; margin-right: 6px; }
+  .dot.off { background: #ef4444; }
+  .tip { font-size: 0.75rem; color: #475569; }
+  @keyframes pulse { 50% { opacity: 0.7; } }
+</style>
+</head>
+<body>
+  <div id="count" title="Clique ou pressione a tecla configurada">0</div>
+  <div class="controls">
+    <div class="row">
+      <span>Tecla de disparo:</span>
+      <kbd id="keyDisplay">Space</kbd>
+      <button id="bindBtn">Trocar tecla</button>
+    </div>
+    <div class="status"><span id="dot" class="dot"></span><span id="statusText">Conectado</span></div>
+    <div class="tip">Funciona local e no Vercel (Polling a cada 800ms)</div>
+  </div>
+<script>
+  const countEl = document.getElementById('count');
+  const keyDisplay = document.getElementById('keyDisplay');
+  const bindBtn = document.getElementById('bindBtn');
+  const dot = document.getElementById('dot');
+  const statusText = document.getElementById('statusText');
+
+  let currentCount = 0;
+  let targetCode = localStorage.getItem('counter_key_code') || 'Space';
+  let targetLabel = localStorage.getItem('counter_key_label') || 'Space';
+  let listeningForKey = false;
+
+  keyDisplay.textContent = targetLabel;
+
+  function render(val) {
+    if (val !== currentCount) {
+      currentCount = val;
+      countEl.textContent = val;
+      countEl.classList.add('bump');
+      setTimeout(() => countEl.classList.remove('bump'), 60);
+    }
+  }
+
+  async function sync() {
+    try {
+      const res = await fetch('/api/count');
+      if (res.ok) {
+        const data = await res.json();
+        render(data.count);
+        dot.classList.remove('off');
+        statusText.textContent = 'Conectado em tempo real';
+      }
+    } catch {
+      dot.classList.add('off');
+      statusText.textContent = 'Reconectando...';
+    }
+  }
+
+  async function increment() {
+    render(currentCount + 1);
+    try {
+      const res = await fetch('/api/count', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        render(data.count);
+      }
+    } catch {}
+  }
+
+  bindBtn.addEventListener('click', () => {
+    listeningForKey = !listeningForKey;
+    bindBtn.classList.toggle('listening', listeningForKey);
+    bindBtn.textContent = listeningForKey ? 'Pressione qualquer tecla...' : 'Trocar tecla';
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (listeningForKey) {
+      e.preventDefault();
+      targetCode = e.code;
+      targetLabel = e.key === ' ' ? 'Space' : e.key.length === 1 ? e.key.toUpperCase() : e.key;
+      localStorage.setItem('counter_key_code', targetCode);
+      localStorage.setItem('counter_key_label', targetLabel);
+      keyDisplay.textContent = targetLabel;
+      listeningForKey = false;
+      bindBtn.classList.remove('listening');
+      bindBtn.textContent = 'Trocar tecla';
+      return;
+    }
+    if (e.repeat) return;
+    if (e.code === targetCode) {
+      e.preventDefault();
+      increment();
+    }
+  });
+
+  countEl.addEventListener('click', increment);
+
+  sync();
+  setInterval(sync, 800);
+</script>
+</body>
+</html>
